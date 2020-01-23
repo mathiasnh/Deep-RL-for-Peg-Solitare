@@ -6,50 +6,61 @@ RANDOM_START = True     # open cells will be placed randomly
 RAND_OPEN_CELLS = 3     # number of random open cells
 OPEN_CELLS = [2]  # only active if not random start 
 
-def printBoard(state):
-    for i in range(BOARD_SIZE):
-        temp = []
+class PegSolitaire:
+    def __init__(self, map):
+        self.map = map
+
+    def printBoard(self, state):
+        for i in range(BOARD_SIZE):
+            temp = []
+            for cell in state:
+                if cell.location[0] == i:
+                    disp = "pegged" if cell.pegged else "empty!"
+                    temp.append(disp)
+            print(temp)
+
+    def produceInitialState(self):
+        self.map.initMap()
+        self.printBoard(self.map.cells)
+        print(tuple(x.pegged for x in self.map.cells))
+
+
+    def generatePossibleStates(self, state):
+        #Is any neighbor's neighbor empty? 
+        #If so, is it possible to jump to (in a straight line)?
+        childStates = []
+
         for cell in state:
-            if cell.location[0] == i:
-                disp = "pegged" if cell.pegged else "empty!"
-                temp.append(disp)
-        print(temp)
+            pos = cell.location
+            if cell.pegged == True:
+                for cn in cell.neighbors:
+                    if cn.pegged == True:
+                        delta = tuple(map(lambda x, y: y - x, pos, cn.location))
+                        nnPos = tuple(map(lambda x, y: x + y, cn.location, delta)) #Pos of neighbor's neighbors we may jump to (if empty)
+                        nn = next((x for x in state if x.location == nnPos), None) #Neighbors's neighbor node
+                        if nn != None and nn.pegged == False:
+                            childStates.append([(cell, False), (cn, False), (nn, True)]) #Actions to a possible state
 
-def generatePossibleStates(state):
-    #Is any neighbor's neighbor empty? 
-    #If so, is it possible to jump to (in a straight line)?
-    childStates = []
+        return childStates
 
-    for cell in state:
-        pos = cell.location
-        if cell.pegged == True:
-            for cn in cell.neighbors:
-                if cn.pegged == True:
-                    delta = tuple(map(lambda x, y: y - x, pos, cn.location))
-                    nnPos = tuple(map(lambda x, y: x + y, cn.location, delta)) #Pos of neighbor's neighbors we may jump to (if empty)
-                    nn = next((x for x in state if x.location == nnPos), None) #Neighbors's neighbor node
-                    if nn != None and nn.pegged == False:
-                        childStates.append([(cell, False), (cn, False), (nn, True)]) #Actions to a possible state
+    def resetState(self, actions):
+        for i in range(3):
+            s[i][0].setPeg(not s[i][1])
 
-    return childStates
+    def isTerminalState(self, state):
+        return len(generatePossibleStates(state)) == 0
 
-def resetState(actions):
-    for i in range(3):
-        s[i][0].setPeg(not s[i][1])
+    def isWinState(self, state):
+        count = sum(s.pegged == True for s in state)
 
-def isFinalState(state):
-    return len(generatePossibleStates(state)) == 0
+        if count == 1:
+            print("*****EYYYY*****")
+            printBoard(state)
+            return True
 
-def isWinState(state):
-    count = sum(s.pegged == True for s in state)
+        return False 
 
-    if count == 1:
-        print("*****EYYYY*****")
-        printBoard(state)
-        return True
-
-    return False 
-
+"""
 if __name__ == "__main__":
 
     perfect = False
@@ -76,3 +87,4 @@ if __name__ == "__main__":
             break
 
     print("Game over")
+    """

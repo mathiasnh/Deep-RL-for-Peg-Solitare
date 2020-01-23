@@ -1,6 +1,6 @@
 import random
 
-class HexMap(object):
+class HexMap:
     def __init__(self, 
                 type,
                 offsets, 
@@ -49,7 +49,7 @@ class DiamondHexMap(HexMap):
                 size, 
                 randStart, 
                 randStartNum, 
-                fixedOpenCells):
+                fixedOpenCells=[]):
         super().__init__("diamond",
                         [(-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0)],
                         size,
