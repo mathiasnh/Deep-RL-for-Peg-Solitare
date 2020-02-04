@@ -15,7 +15,7 @@ class PegSolitaire:
         self.produce_initial_state()
 
     def print_board(self):
-        for i in range(BOARD_SIZE):
+        for i in range(self.board.size):
             temp = []
             for cell in self.board.cells:
                 if cell.location[0] == i:
@@ -68,7 +68,7 @@ class PegSolitaire:
 
         return False 
 
-
+"""
 if __name__ == "__main__":
 
     perfect = False
@@ -97,3 +97,4 @@ if __name__ == "__main__":
             break
 
     print("Game over")
+"""

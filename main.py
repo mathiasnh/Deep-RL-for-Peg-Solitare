@@ -42,31 +42,33 @@ def get_state_and_action(learner, epsilon):
     return state, action, choice_string
 
 if __name__ == "__main__":
-    SIZE = 6
-    EPISODES = 300
-    EPSILON_ = 0.99
+    SIZE = 4
+    EPISODES = 1000
+    EPSILON_ = 0.9
     EPSILON_DECAY = -1/EPISODES
+    EPSILON_DECAY_RATE = 0.99
     CRITIC_DISCOUNT_FACTOR = 0.5
     ACTOR_DISCOUNT_FACTOR = 0.5
-    CRITIC_LEARNING_RATE = 0.3
-    ACTOR_LEARNING_RATE = 0.2
-    CRITIC_ELIGIBILITY_DECAY_RATE = 0.2
-    ACTOR_ELIGIBILITY_DECAY_RATE = 0.2
+    CRITIC_LEARNING_RATE = 0.001
+    ACTOR_LEARNING_RATE = 0.001
+    CRITIC_ELIGIBILITY_DECAY_RATE = 0.1
+    ACTOR_ELIGIBILITY_DECAY_RATE = 0.1
     STEP_REWARD = 0.0
     WIN_REWARD = 100
-    LOSE_REWARD = -1
+    LOSE_REWARD = -10
 
     actor = Actor()
     critic = TableCritic(CRITIC_DISCOUNT_FACTOR)
     learner = RLearner(actor, critic)
 
     """ Train for all starting positions """
-    for i in range(SIZE**2):
+    for i in range(1):
         peg_result = []
         EPSILON = EPSILON_
 
         for j in tqdm(range(EPISODES)):
-            map = DiamondHexMap(SIZE, True, 1, [0])
+            print(EPSILON)
+            map = DiamondHexMap(SIZE, False, 1, [2])
             world = PegSolitaire(map)
             environment = PegSolEnvironment(world)
             learner.critic.set_environment(environment)
@@ -122,21 +124,25 @@ if __name__ == "__main__":
                         learner.actor.set_eligibility(sap, ACTOR_LEARNING_RATE*ACTOR_ELIGIBILITY_DECAY_RATE*learner.actor.eTrace[sap])
 
                     prevstate = state
-                    EPSILON = max(EPSILON + EPSILON_DECAY, 0) 
                     
                 else:
                     game = False
                     peg_result.append(sum(s.pegged == True for s in learner.critic.environment.world.board.cells))
 
+            #EPSILON = max(EPSILON + EPSILON_DECAY, 0) 
+            EPSILON = EPSILON*EPSILON_DECAY_RATE
                     
             learner.critic.environment.reset_environment()
-        print(EPSILON)
+        #print(EPSILON)
         plt.plot(peg_result)
         plt.ylabel("Pegs left")
         plt.xlabel("Episodes")
+        plt.show()
+        """
         plt.draw()
         plt.pause(0.2)
         plt.clf()
+        """
 
 
     
