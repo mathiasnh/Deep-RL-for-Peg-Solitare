@@ -1,0 +1,22 @@
+[
+    {
+        "size": 3,
+        "fixed_start": [2],
+        "rand_start": 0,
+        "rand_start_num": 1,
+        "episodes": 100000,
+        "epsilon": 0.9,
+        "epsilon_decay_rate": 0.995,
+        "critic_discount_factor": 0.8,
+        "actor_discount_factor": 0.9,
+        "critic_learning_rate": 0.001,
+        "actor_learning_rate": 0.001,
+        "critic_eligibility_decay_rate": 0.05,
+        "actor_eligibility_decay_rate": 0.05,
+        "step_reward": 0,
+        "win_reward": 100,
+        "lose_reward": -10  
+    }
+]
+
+    

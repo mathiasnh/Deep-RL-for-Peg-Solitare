@@ -17,7 +17,7 @@ class RLearner:
         If the state is unknown, the choice will always be random.
         """
         choice_string = ""
-        if randrange(100)/100 < epsilon:
+        if randrange(10000)/10000 < epsilon:
             action = self.get_random_action()
             choice_string = "randomly by epsilon"
         else:
@@ -68,11 +68,12 @@ class Actor:
 
 
 class Critic:
-    def __init__(self, values, eTrace, discount_factor):
+    def __init__(self, values, eTrace, environment, discount_factor):
         self.values = values
         self.eTrace = eTrace
         self.discount_factor = discount_factor
         self.TD_error = None
+        self.environment = environment
 
     def set_value(self, state, value):
         self.values[state] = value
@@ -80,16 +81,19 @@ class Critic:
     def set_eligibility(self, state, e):
         self.eTrace[state] = e
 
-    def set_TD_error(self, r, state, prevstate):
-        self.TD_error = r + self.discount_factor * self.values[state] - self.values[prevstate] 
+    def set_TD_error(self, r, state, prevstate, df):
+        self.TD_error = r + df * self.values[state] - self.values[prevstate] 
 
+    """
     def set_environment(self, environment):
         self.environment = environment
+    """
 
 class TableCritic(Critic):
-    def __init__(self, discount_factor):
+    def __init__(self, environment, discount_factor):
         super().__init__(defaultdict(lambda: randrange(100)/100),
                         defaultdict(lambda: 0),
+                        environment,
                         discount_factor)
 
 class NeuralCritic(Critic):
