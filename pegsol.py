@@ -1,12 +1,6 @@
 from hexmap import TriangleHexMap, DiamondHexMap
 from random import randrange
 
-BOARD_SIZE = 4
-BOARD_TYPE = "diamond" # triangle / diamond
-RANDOM_START = True     # open cells will be placed randomly
-RAND_OPEN_CELLS = 6     # number of random open cells
-OPEN_CELLS = [2]  # only active if not random start 
-
 class PegSolitaire:
     def __init__(self, board):
         self.board = board
@@ -62,39 +56,6 @@ class PegSolitaire:
         count = sum(s.pegged == True for s in self.board.cells)
 
         if count == 1:
-            #print("*****EYYYY*****")
-            #self.print_board()
             return True
 
         return False 
-
-"""
-if __name__ == "__main__":
-
-    perfect = False
-    
-    for i in range(1000):
-        count = 0
-        board = DiamondHexMap(BOARD_SIZE, RANDOM_START, RAND_OPEN_CELLS, OPEN_CELLS)
-        world = PegSolitaire(board)
-        world.produce_initial_state()
-        state = world.board.cells
-        if i == 0:
-            world.print_board(state)
-        game = True
-        while game:
-            #input("Press enter to continue...")
-            #print_board(state)
-            child_states = world.generate_possible_states()
-            if not world.is_terminal_state():
-                index = randrange(len(child_states))
-                s = child_states[index]
-                world.setState(s) #Apply action
-            else:
-                perfect = world.is_win_state()
-                game = False
-        if perfect == True:
-            break
-
-    print("Game over")
-"""

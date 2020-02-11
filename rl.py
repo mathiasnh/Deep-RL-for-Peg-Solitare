@@ -1,6 +1,15 @@
+import numpy as np 
 from collections import defaultdict
 from random import randrange
 from abc import ABC, abstractmethod
+from keras.models import Sequential, Model
+from keras.layers import Dense, Dropout, Input
+from keras.layers.merge import Add, Multiply
+from keras.optimizers import Adam
+import keras.backend as K
+import tensorflow as tf
+
+from splitgd import fit
 
 class RLearner:
     def __init__(self, 
@@ -82,12 +91,7 @@ class Critic:
         self.eTrace[state] = e
 
     def set_TD_error(self, r, state, prevstate, df):
-        self.TD_error = r + df * self.values[state] - self.values[prevstate] 
-
-    """
-    def set_environment(self, environment):
-        self.environment = environment
-    """
+        self.TD_error = r + df * self.values[state] - self.values[prevstate]
 
 class TableCritic(Critic):
     def __init__(self, environment, discount_factor):
@@ -96,9 +100,30 @@ class TableCritic(Critic):
                         environment,
                         discount_factor)
 
-class NeuralCritic(Critic):
+class NeuralNetCritic(Critic):
     def __init__(self):
         super().__init__()
+        _, self.model = self.init_NN_critic()
+
+    def init_NN_critic(self):
+        sess = tf.compat.v1.Session()
+        K.set_session(sess)
+
+        state_input = Input(shape=(16,0))
+        h1 = Dense(24, activation='relu')(state_input)
+        h2 = Dense(48, activation='relu')(h1)
+        h3 = Dense(24, activation='relu')(h2)
+        output = Dense(1, activation='relu')(h3)
+        
+        model = Sequential(input=state_input, output=output)
+        adam  = Adam(lr=0.001)
+        model.compile(loss="mse", optimizer=adam)
+        return state_input, model
+
+    "Sende inn self.model.predict for å få brettet (liste) om til tensor"
+    "Hente gradienter"
+    "Fikse eligibilieties"
+    "Calle fit"
 
 class Environment(ABC):
     @abstractmethod

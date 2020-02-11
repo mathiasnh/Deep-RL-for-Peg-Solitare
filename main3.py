@@ -46,7 +46,7 @@ def get_state_and_action(learner, epsilon):
     return state, action, choice_string
 
 if __name__ == "__main__":
-    SIZE = 3
+    SIZE = 5
     EPISODES = 1000
     EPSILON = 0.9
     EPSILON_DECAY = -1/EPISODES
@@ -61,15 +61,14 @@ if __name__ == "__main__":
     WIN_REWARD = 100
     LOSE_REWARD = -50
 
-    #map = DiamondHexMap(SIZE, False, 1, [2, 6, 10, 13, 16, 22, 24])
-    map = DiamondHexMap(SIZE, False, 1, [0,2,8])
-    #map = TriangleHexMap(SIZE, False, 1, [4])
+    map = DiamondHexMap(SIZE, False, 1, [2, 6, 10, 13, 16, 22, 24])
+    #map = DiamondHexMap(SIZE, False, 1, [12])
+    #map = TriangleHexMap(SIZE, False, 1, [2])
     world = PegSolitaire(map)
     environment = PegSolEnvironment(world)
     actor = Actor()
     critic = TableCritic(environment, CRITIC_DISCOUNT_FACTOR)
     learner = RLearner(actor, critic)
-    #learner.critic.set_environment(environment)
 
     epsilons = []
     peg_result = []
@@ -106,7 +105,7 @@ if __name__ == "__main__":
 
                 """ Reward  """
                 if learner.critic.environment.is_terminal_state():
-                    reward = WIN_REWARD if learner.critic.environment.is_win_state() else LOSE_REWARD*learner.critic.environment.pegs_left()
+                    reward = WIN_REWARD if learner.critic.environment.is_win_state() else LOSE_REWARD#*learner.critic.environment.pegs_left()
                     #print(reward)
                 else:
                     reward = STEP_REWARD
@@ -133,8 +132,8 @@ if __name__ == "__main__":
                 game = False
                 peg_result.append(sum(s.pegged == True for s in learner.critic.environment.world.board.cells))
 
-        EPSILON = max(EPSILON + EPSILON_DECAY, 0) 
-        #EPSILON = EPSILON*EPSILON_DECAY_RATE
+        #EPSILON = max(EPSILON + EPSILON_DECAY, 0) 
+        EPSILON = EPSILON*EPSILON_DECAY_RATE
                 
         learner.critic.environment.reset_environment()
     
