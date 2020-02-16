@@ -1,6 +1,7 @@
 from hexmap import DiamondHexMap, TriangleHexMap
 from pegsol import PegSolitaire
 from rl import Environment, RLearner, Actor, TableCritic, NeuralNetCritic
+from visualization import HexMapVisualizer
 from random import randrange
 from tqdm import tqdm
 from time import sleep
@@ -37,7 +38,7 @@ class PegSolEnvironment(Environment):
         return sum(s.pegged == True for s in self.world.board.cells)
 
 
-"""Helper function"""
+"""Helper functions"""
 def get_state_and_action(learner, epsilon, nn_critic):
     state = learner.critic.environment.get_current_state()
     action = learner.decide_action_to_take(state, EPSILON)
@@ -48,18 +49,36 @@ def get_state_and_action(learner, epsilon, nn_critic):
 
     return state, action
 
+def play(learner, visualizer, delay=1):
+    game = True
+
+    while game:
+        state = learner.critic.environment.world.board.cells # Need state with (pegged, pos) for visualization
+        action = learner.decide_action_to_take(learner.critic.environment.get_current_state(), 0) # Epsilon = 0 (on-policy)
+        
+        visualizer.draw(state, action, delay)
+
+        """ Do action a --> now in state s' """
+        learner.critic.environment.perform_action(action)
+
+        if learner.critic.environment.is_terminal_state():
+            visualizer.draw(state, None, delay)
+            game = False
+            
+    learner.critic.environment.reset_environment()
+
 if __name__ == "__main__":
-    SIZE                            = 5
-    DIAMOND_SHAPE                   = False # if False: Triangle
-    NN_CRITIC                       = True  # if False: TableCritic
-    EPISODES                        = 700
+    SIZE                            = 4
+    DIAMOND_SHAPE                   = True # if False: Triangle
+    NN_CRITIC                       = False  # if False: TableCritic
+    EPISODES                        = 1000
     EPSILON                         = 0.9
     EPSILON_DECAY                   = -1/EPISODES
     EPSILON_DECAY_RATE              = 0.99
     CRITIC_DISCOUNT_FACTOR          = 0.9225
     ACTOR_DISCOUNT_FACTOR           = 0.7583
-    CRITIC_LEARNING_RATE            = 0.4798 # smaller for neural net (?)
-    ACTOR_LEARNING_RATE             = 0.0815
+    CRITIC_LEARNING_RATE            = 0.0798 # smaller for neural net (?)
+    ACTOR_LEARNING_RATE             = 0.8815
     CRITIC_ELIGIBILITY_DECAY_RATE   = 0.018
     ACTOR_ELIGIBILITY_DECAY_RATE    = 0.7017
     """
@@ -73,7 +92,7 @@ if __name__ == "__main__":
     STEP_REWARD                     = 0
     WIN_REWARD                      = 100
     LOSE_REWARD                     = -50
-    NN_LAYERS                       = [10, 1]
+    NN_LAYERS                       = [10, 5, 1]
     
     NN_INPUT_SIZE = SIZE**2 if DIAMOND_SHAPE else sum(x for x in range(SIZE+1))
 
@@ -84,7 +103,7 @@ if __name__ == "__main__":
         map = DiamondHexMap(SIZE, False, 1, [6])
     else:
         map = TriangleHexMap(SIZE, False, 1, [5])
-
+    
     world = PegSolitaire(map)
     environment = PegSolEnvironment(world)
     actor = Actor(ACTOR_LEARNING_RATE, 
@@ -104,6 +123,8 @@ if __name__ == "__main__":
                                 CRITIC_ELIGIBILITY_DECAY_RATE)
     learner = RLearner(actor, critic)
 
+    visualizer = HexMapVisualizer(world.board.cells, DIAMOND_SHAPE)
+
     epsilons = []
     peg_result = []
     for j in tqdm(range(EPISODES)):
@@ -120,8 +141,6 @@ if __name__ == "__main__":
         reward = 0
 
         while game:
-            #input("Press enter to continue...")
-            #sleep(0.5)
             if not learner.critic.environment.is_terminal_state():
                 current_episode.append(tuple([state, action]))
 
@@ -132,8 +151,7 @@ if __name__ == "__main__":
 
                 """ Reward  """
                 if learner.critic.environment.is_terminal_state():
-                    reward = WIN_REWARD if learner.critic.environment.is_win_state() else LOSE_REWARD#*learner.critic.environment.pegs_left()
-                    #print(reward)
+                    reward = WIN_REWARD if learner.critic.environment.is_win_state() else LOSE_REWARD#
                 else:
                     reward = STEP_REWARD
 
@@ -168,15 +186,17 @@ if __name__ == "__main__":
     
     plt.plot(peg_result, label="Pegs left")
     plt.plot(epsilons, label="Epsilon")
-    #plt.ylabel("Pegs left")
+    plt.ylabel("Pegs left")
     plt.xlabel("Episodes")
     plt.legend()
-    plt.show()
-    """
     plt.draw()
-    plt.pause(0.2)
-    plt.clf()
-    """
+    plt.pause(0.5)
+
+    while True:
+        delay = input("Type in a desired delay (in ms) between action, and a game will start: ")
+        play(learner, visualizer, float(delay))
+
+
 
 
     

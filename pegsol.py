@@ -12,14 +12,18 @@ class PegSolitaire:
         for i in range(self.board.size):
             temp = []
             for cell in self.board.cells:
-                if cell.location[0] == i:
+                if cell.pos[0] == i:
                     disp = "pegged" if cell.pegged else "empty!"
                     temp.append(disp)
             print(temp)
 
     def produce_initial_state(self):
+        """
+            Initalizes map and produces an initial state 
+            that is used if environment needs to be reset
+        """
         self.board.init_map()
-        self.inital_state = [(x.location, x.pegged) for x in self.board.cells]
+        self.inital_state = [(x.pos, x.pegged) for x in self.board.cells]
 
 
     def generate_possible_states(self):
@@ -27,15 +31,15 @@ class PegSolitaire:
         state = self.board.cells
 
         for cell in state:
-            pos = cell.location
+            pos = cell.pos
             if cell.pegged == True:
                 for cn in cell.neighbors:
                     if cn.pegged == True:
-                        delta = tuple(map(lambda x, y: y - x, pos, cn.location))
-                        nn_pos = tuple(map(lambda x, y: x + y, cn.location, delta)) #Pos of neighbor's neighbors we may jump to (if empty)
-                        nn = next((x for x in state if x.location == nn_pos), None) #Neighbors's neighbor node
+                        delta = tuple(map(lambda x, y: y - x, pos, cn.pos))
+                        nn_pos = tuple(map(lambda x, y: x + y, cn.pos, delta)) #Pos of neighbor's neighbors we may jump to (if empty)
+                        nn = next((x for x in state if x.pos == nn_pos), None) #Neighbors's neighbor node
                         if nn != None and nn.pegged == False:
-                            child_states.append(tuple([cell.location, cn.location, nn.location]))
+                            child_states.append(tuple([cell.pos, cn.pos, nn.pos]))
 
         return child_states
 
@@ -44,7 +48,7 @@ class PegSolitaire:
             c.set_peg(self.inital_state[i][1])
 
     def set_state(self, action):
-        action_cells = [c for c in self.board.cells if c.location in action]
+        action_cells = [c for c in self.board.cells if c.pos in action]
         for a in action_cells:
             a.set_peg(not a.pegged)
 

@@ -20,12 +20,12 @@ class HexMap:
     
     def create_neighborhood(self):
         for cell in self.cells:
-            r, c = cell.location[0], cell.location[1]
+            r, c = cell.pos
             neighbors = []
 
             for (a,b) in self.offsets:
                 if r+a >= 0 and c+b >= 0:
-                    n = next((x for x in self.cells if x.location == (r+a, c+b)), None)
+                    n = next((x for x in self.cells if x.pos == (r+a, c+b)), None)
                     if n != None:
                         neighbors.append(n)
 
@@ -74,8 +74,8 @@ class TriangleHexMap(HexMap):
                         fixed_open_cells)
 
 class Cell:
-    def __init__(self, location, pegged, neighbors=[]):
-        self.location = location
+    def __init__(self, pos, pegged, neighbors=[]):
+        self.pos = pos
         self.pegged = pegged
         self.neighbors = neighbors
     

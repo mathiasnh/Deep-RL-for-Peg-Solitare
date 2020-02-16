@@ -95,16 +95,13 @@ class TableCritic(Critic):
         self.values = defaultdict(lambda: randrange(100)/100)
 
     def set_value(self, state):
-        print("hallo?")
         self.values[state] = self.values[state] + self.learning_rate * self.TD_error * self.e_trace[state]
 
     def set_eligibility(self, state, reset=0):
-        print("hallo?")
         new_eligibility = self.discount_factor * self.e_decay_rate * self.e_trace[state]
         self.e_trace[state] = new_eligibility if reset == 0 else 1
 
     def set_TD_error(self, r, state, prevstate):
-        print("hallo?")
         self.TD_error = r + self.discount_factor * self.values[state] - self.values[prevstate]
 
 
