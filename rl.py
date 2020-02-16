@@ -1,15 +1,12 @@
 import numpy as np 
+import torch 
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import torch.tensor
 from collections import defaultdict
 from random import randrange
 from abc import ABC, abstractmethod
-from keras.models import Sequential, Model
-from keras.layers import Dense, Dropout, Input
-from keras.layers.merge import Add, Multiply
-from keras.optimizers import Adam
-import keras.backend as K
-import tensorflow as tf
-
-from splitgd import fit
 
 class RLearner:
     def __init__(self, 
@@ -25,23 +22,15 @@ class RLearner:
         Decides whether to do an action based on policy or randomly.
         If the state is unknown, the choice will always be random.
         """
-        choice_string = ""
         if randrange(10000)/10000 < epsilon:
             action = self.get_random_action()
-            choice_string = "randomly by epsilon"
         else:
             if state in (x[0] for x in self.actor.policy.keys()):
                 action = self.actor.select_action(state)
-                choice_string = "not randomly"
             else:
                 action = self.get_random_action()
-                choice_string = "randomly because no actions for this state yet"
-                """
-                for sap in self.actor.policy:
-                    print(str(sap) + " " + str(self.actor.policy[sap]))
-                """
 
-        return action, choice_string
+        return action
 
     def get_random_action(self):
         possible_actions = self.critic.environment.generate_possible_child_states()
@@ -54,15 +43,19 @@ class RLearner:
 
 
 class Actor:
-    def __init__(self):
+    def __init__(self, learning_rate, discount_factor, e_decay_rate):
         self.policy = defaultdict(lambda: 0)
-        self.eTrace = defaultdict(lambda: 0)
+        self.e_trace = defaultdict(lambda: 0)
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.e_decay_rate = e_decay_rate
 
-    def set_policy(self, sap, value):
-        self.policy[sap] = value
+    def set_policy(self, sap, delta):
+        self.policy[sap] = self.policy[sap] + self.learning_rate * delta * self.e_trace[sap]
 
-    def set_eligibility(self, sap, e):
-        self.eTrace[sap] = e
+    def set_eligibility(self, sap, reset=0):
+        new_eligibility = self.discount_factor * self.e_decay_rate * self.e_trace[sap]
+        self.e_trace[sap] = new_eligibility if reset == 0 else 1
 
     def select_action(self, state):
         max = float('-inf')
@@ -77,53 +70,118 @@ class Actor:
 
 
 class Critic:
-    def __init__(self, values, eTrace, environment, discount_factor):
-        self.values = values
-        self.eTrace = eTrace
-        self.discount_factor = discount_factor
-        self.TD_error = None
+    def __init__(self, e_trace, environment, learning_rate, discount_factor, e_decay_rate):
+        self.e_trace = e_trace
         self.environment = environment
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.e_decay_rate = e_decay_rate
+        self.TD_error = None
 
-    def set_value(self, state, value):
-        self.values[state] = value
+    def reset_e_trace(self):
+        pass
 
-    def set_eligibility(self, state, e):
-        self.eTrace[state] = e
+    def set_eligibility(self, state, reset=0):
+        pass
 
-    def set_TD_error(self, r, state, prevstate, df):
-        self.TD_error = r + df * self.values[state] - self.values[prevstate]
 
 class TableCritic(Critic):
-    def __init__(self, environment, discount_factor):
-        super().__init__(defaultdict(lambda: randrange(100)/100),
-                        defaultdict(lambda: 0),
+    def __init__(self, environment, learning_rate, discount_factor, e_decay_rate):
+        super().__init__(defaultdict(lambda: 0),
                         environment,
-                        discount_factor)
+                        learning_rate,
+                        discount_factor,
+                        e_decay_rate)
+        self.values = defaultdict(lambda: randrange(100)/100)
+
+    def set_value(self, state):
+        print("hallo?")
+        self.values[state] = self.values[state] + self.learning_rate * self.TD_error * self.e_trace[state]
+
+    def set_eligibility(self, state, reset=0):
+        print("hallo?")
+        new_eligibility = self.discount_factor * self.e_decay_rate * self.e_trace[state]
+        self.e_trace[state] = new_eligibility if reset == 0 else 1
+
+    def set_TD_error(self, r, state, prevstate):
+        print("hallo?")
+        self.TD_error = r + self.discount_factor * self.values[state] - self.values[prevstate]
+
 
 class NeuralNetCritic(Critic):
-    def __init__(self):
-        super().__init__()
-        _, self.model = self.init_NN_critic()
+    def __init__(self, environment, learning_rate, discount_factor, e_decay_rate, layers, input_size):
+        super().__init__([],
+                        environment, 
+                        learning_rate, 
+                        discount_factor, 
+                        e_decay_rate)
+        self.input_size = input_size
+        self.activation = nn.ReLU()
+        self.model = self.init_neural_net(layers)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
 
-    def init_NN_critic(self):
-        sess = tf.compat.v1.Session()
-        K.set_session(sess)
+    def init_neural_net(self, layers):
 
-        state_input = Input(shape=(16,0))
-        h1 = Dense(24, activation='relu')(state_input)
-        h2 = Dense(48, activation='relu')(h1)
-        h3 = Dense(24, activation='relu')(h2)
-        output = Dense(1, activation='relu')(h3)
+        container_modules = []
+
+        # Input layer
+        container_modules.append(nn.Linear(self.input_size, layers[0]))
+        container_modules.append(self.activation)
+
+        # Hidden layer(s) and output layer
+        for i in range(len(layers)-1):
+            container_modules.append(nn.Linear(layers[i], layers[i+1]))
+            container_modules.append(self.activation)
+
+        return nn.Sequential(*container_modules)
+
+    def loss(self, delta):
+        """
+        Mean squared error of the difference between our neural network’s 
+        output for the next state and the output for the current state
+        """
+        return torch.mean(delta**2)
+
+    def get_value(self, state):
+        return self.model(torch.tensor(state, dtype=torch.float) )
+
+    def set_value(self, state):
         
-        model = Sequential(input=state_input, output=output)
-        adam  = Adam(lr=0.001)
-        model.compile(loss="mse", optimizer=adam)
-        return state_input, model
+        # Reset gradients 
+        self.optimizer.zero_grad()
+        """
+        # Update weight gradients
+        self.loss(self.TD_error).backward(retain_graph=True) # Retain graph so buffers can be freed
 
-    "Sende inn self.model.predict for å få brettet (liste) om til tensor"
-    "Hente gradienter"
-    "Fikse eligibilieties"
-    "Calle fit"
+        with torch.no_grad():
+            for i, w in enumerate(self.model.parameters()):
+                for j in range(len(w)):
+                    self.e_trace[i][j] = self.discount_factor * self.e_decay_rate * self.e_trace[i][j] + w.grad[j]
+                    w.grad[j] *= self.e_trace[i][j]
+            
+            self.optimizer.step()
+        """
+        self.get_value(state).backward()
+
+        for weight, eligibility in zip(self.model.parameters(), self.e_trace):
+            eligibility *= self.discount_factor * self.e_decay_rate
+            eligibility += weight.grad
+
+            weight = self.TD_error * eligibility
+        self.optimizer.step()
+
+
+    def set_TD_error(self, r, state, prevstate):
+        prevstate_value = self.get_value(prevstate)
+        currstate_value = self.get_value(state)
+
+        self.TD_error = r + self.discount_factor * currstate_value - prevstate_value
+
+    def reset_e_trace(self):
+        self.e_trace = [torch.tensor(np.zeros(params.shape)) for params in self.model.parameters()]
+
+
+
 
 class Environment(ABC):
     @abstractmethod
@@ -142,9 +200,5 @@ class Environment(ABC):
     def perform_action():
         pass
 
-
-
-#TDError = reinforcement + discountFactor*value(newState) - value(state)
-#value(state) = value(state) + learningRate * tdError
 
 
