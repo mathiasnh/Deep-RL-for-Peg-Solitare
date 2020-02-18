@@ -9,6 +9,9 @@ from random import randrange
 from abc import ABC, abstractmethod
 
 class RLearner:
+    """
+        The agent that 
+    """
     def __init__(self, 
                 actor, 
                 critic):
@@ -123,12 +126,14 @@ class NeuralNetCritic(Critic):
 
         # Input layer
         container_modules.append(nn.Linear(self.input_size, layers[0]))
-        container_modules.append(self.activation)
+        #container_modules.append(self.activation)
 
         # Hidden layer(s) and output layer
         for i in range(len(layers)-1):
-            container_modules.append(nn.Linear(layers[i], layers[i+1]))
             container_modules.append(self.activation)
+            container_modules.append(nn.Linear(layers[i], layers[i+1]))
+
+        container_modules.append(nn.Sigmoid())
 
         return nn.Sequential(*container_modules)
 
@@ -140,42 +145,43 @@ class NeuralNetCritic(Critic):
         return torch.mean(delta**2)
 
     def get_value(self, state):
-        return self.model(torch.tensor(state, dtype=torch.float) )
+        return self.model(torch.tensor(state, dtype=torch.float))
 
     def set_value(self, state):
         
         # Reset gradients 
         self.optimizer.zero_grad()
-        """
+        
         # Update weight gradients
+        """
         self.loss(self.TD_error).backward(retain_graph=True) # Retain graph so buffers can be freed
-
-        with torch.no_grad():
             for i, w in enumerate(self.model.parameters()):
                 for j in range(len(w)):
                     self.e_trace[i][j] = self.discount_factor * self.e_decay_rate * self.e_trace[i][j] + w.grad[j]
                     w.grad[j] *= self.e_trace[i][j]
             
             self.optimizer.step()
+
         """
         self.get_value(state).backward()
-
-        for weight, eligibility in zip(self.model.parameters(), self.e_trace):
-            eligibility *= self.discount_factor * self.e_decay_rate
-            eligibility += weight.grad
-
-            weight = self.TD_error * eligibility
-        self.optimizer.step()
-
+        
+        with torch.no_grad():
+            for weight, eligibility in zip(self.model.parameters(), self.e_trace):
+                eligibility *= self.discount_factor * self.e_decay_rate
+                eligibility += weight.grad
+                
+                weight.grad = -self.TD_error * eligibility
+            self.optimizer.step() # w -= lr * w.grad
+        
 
     def set_TD_error(self, r, state, prevstate):
         prevstate_value = self.get_value(prevstate)
         currstate_value = self.get_value(state)
-
+        
         self.TD_error = r + self.discount_factor * currstate_value - prevstate_value
 
     def reset_e_trace(self):
-        self.e_trace = [torch.tensor(np.zeros(params.shape)) for params in self.model.parameters()]
+        self.e_trace = [torch.tensor(np.zeros(params.shape), dtype=torch.float) for params in self.model.parameters()]
 
 
 

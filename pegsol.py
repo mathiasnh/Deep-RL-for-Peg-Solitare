@@ -2,20 +2,14 @@ from hexmap import TriangleHexMap, DiamondHexMap
 from random import randrange
 
 class PegSolitaire:
+    """
+        The Simulated world (SimWorld) for the game Peg Solitaire
+    """
     def __init__(self, board):
         self.board = board
         self.inital_state = None
 
         self.produce_initial_state()
-
-    def print_board(self):
-        for i in range(self.board.size):
-            temp = []
-            for cell in self.board.cells:
-                if cell.pos[0] == i:
-                    disp = "pegged" if cell.pegged else "empty!"
-                    temp.append(disp)
-            print(temp)
 
     def produce_initial_state(self):
         """
@@ -27,6 +21,11 @@ class PegSolitaire:
 
 
     def generate_possible_states(self):
+        """
+            Traverses the current board state and finds all possible/legal
+            actions based on the game rules. An action represents the 
+            state it leads to.
+        """
         child_states = []
         state = self.board.cells
 
@@ -44,19 +43,35 @@ class PegSolitaire:
         return child_states
 
     def reset_state(self):
+        """
+            Resets the board to its initial state
+        """
         for i, c in enumerate(self.board.cells):
             c.set_peg(self.inital_state[i][1])
 
     def set_state(self, action):
+        """
+            Pushes board into the next state depending
+            on some action. A legal action involves two nodes
+            becoming empty while one becomes pegged.
+        """
         action_cells = [c for c in self.board.cells if c.pos in action]
         for a in action_cells:
             a.set_peg(not a.pegged)
 
     def is_terminal_state(self):
+        """
+            The board is in a terminal state if there are no
+            possible legal moves to be taken.
+        """
         actions = self.generate_possible_states()
         return len(actions) == 0
 
     def is_win_state(self):
+        """
+            The board is in a winning state if there is only one
+            peg left on the board. 
+        """
         count = sum(s.pegged == True for s in self.board.cells)
 
         if count == 1:
