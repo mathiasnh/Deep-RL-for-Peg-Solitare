@@ -19,7 +19,6 @@ class PegSolitaire:
         self.board.init_map()
         self.inital_state = [(x.pos, x.pegged) for x in self.board.cells]
 
-
     def generate_possible_states(self):
         """
             Traverses the current board state and finds all possible/legal

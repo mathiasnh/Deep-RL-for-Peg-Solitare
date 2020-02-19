@@ -1,7 +1,6 @@
 import numpy as np 
 import torch 
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import torch.tensor
 from collections import defaultdict
@@ -17,8 +16,6 @@ class RLearner:
                 critic):
         self.actor = actor
         self.critic = critic
-        self.state = None
-        self.action = None
         
     def decide_action_to_take(self, state, epsilon):
         """
@@ -61,6 +58,9 @@ class Actor:
         self.e_trace[sap] = new_eligibility if reset == 0 else 1
 
     def select_action(self, state):
+        """ 
+            Selects the action with highest value from policy
+        """
         max = float('-inf')
         action = None
         for s in (x for x in self.policy.keys() if x[0] == state):
@@ -128,11 +128,12 @@ class NeuralNetCritic(Critic):
         container_modules.append(nn.Linear(self.input_size, layers[0]))
         #container_modules.append(self.activation)
 
-        # Hidden layer(s) and output layer
+        # Hidden layer(s)
         for i in range(len(layers)-1):
             container_modules.append(self.activation)
             container_modules.append(nn.Linear(layers[i], layers[i+1]))
 
+        # Output layer
         container_modules.append(nn.Sigmoid())
 
         return nn.Sequential(*container_modules)
@@ -145,6 +146,9 @@ class NeuralNetCritic(Critic):
         return torch.mean(delta**2)
 
     def get_value(self, state):
+        """
+            Performs forward pass (prediction) on state tensor
+        """
         return self.model(torch.tensor(state, dtype=torch.float))
 
     def set_value(self, state):
@@ -152,23 +156,19 @@ class NeuralNetCritic(Critic):
         # Reset gradients 
         self.optimizer.zero_grad()
         
-        # Update weight gradients
-        """
-        self.loss(self.TD_error).backward(retain_graph=True) # Retain graph so buffers can be freed
-            for i, w in enumerate(self.model.parameters()):
-                for j in range(len(w)):
-                    self.e_trace[i][j] = self.discount_factor * self.e_decay_rate * self.e_trace[i][j] + w.grad[j]
-                    w.grad[j] *= self.e_trace[i][j]
-            
-            self.optimizer.step()
-
-        """
+        # Compute gradients of loss-function (NOT USED)
+        #self.loss(self.TD_error).backward(retain_graph=True) # Retain graph so buffers can be freed
+    
+        # Gradient update as explained in Sutton & Barto (p. 232)
         self.get_value(state).backward()
         
+        # Update weights for each layer 
         with torch.no_grad():
             for weight, eligibility in zip(self.model.parameters(), self.e_trace):
                 eligibility *= self.discount_factor * self.e_decay_rate
                 eligibility += weight.grad
+
+                #weight.grad *= eligibility # Only for loss gradient
                 
                 weight.grad = -self.TD_error * eligibility
             self.optimizer.step() # w -= lr * w.grad
