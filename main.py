@@ -54,6 +54,10 @@ def get_state_and_action(learner, epsilon, nn_critic):
     return state, action
 
 def plot_results(peg_result, epsilons):
+    """
+        Plots results from each episode in the run 
+        as well as the epsilon decay.
+    """
     plt.plot(peg_result, label="Pegs left")
     plt.plot(epsilons, label="Epsilon")
     plt.ylabel("Pegs left")
@@ -64,6 +68,9 @@ def plot_results(peg_result, epsilons):
     plt.pause(0.5)
 
 def play(learner, visualizer, delay=1):
+    """
+        Play one game with epsilon=0 (on-policy)
+    """
     game = True
 
     states = []
@@ -86,31 +93,31 @@ def play(learner, visualizer, delay=1):
 
 
 if __name__ == "__main__":
-    SIZE                            = 4
+    SIZE                            = 6
     DIAMOND_SHAPE                   = True # if False: Triangle
     NN_CRITIC                       = True  # if False: TableCritic
-    EPISODES                        = 700
-    EPSILON                         = 0.9
+    EPISODES                        = 50
+    EPSILON                         = 0.99
     EPSILON_DECAY                   = -1/EPISODES #EPSILON = max(EPSILON + EPSILON_DECAY, 0) 
-    EPSILON_DECAY_RATE              = 0.992
+    EPSILON_DECAY_RATE              = 0.99
     CRITIC_DISCOUNT_FACTOR          = 0.92
     ACTOR_DISCOUNT_FACTOR           = 0.76
-    CRITIC_LEARNING_RATE            = 0.08 # smaller for neural net (?)
+    CRITIC_LEARNING_RATE            = 0.008
     ACTOR_LEARNING_RATE             = 0.2
-    CRITIC_ELIGIBILITY_DECAY_RATE   = 0.82
+    CRITIC_ELIGIBILITY_DECAY_RATE   = 0.1
     ACTOR_ELIGIBILITY_DECAY_RATE    = 0.8
     STEP_REWARD                     = 0
     WIN_REWARD                      = 100
-    LOSE_REWARD                     = -10
+    LOSE_REWARD                     = -50
     NN_LAYERS                       = [10, 1]
     
     # Number of nodes on game board 
     NN_INPUT_SIZE = SIZE**2 if DIAMOND_SHAPE else sum(x for x in range(SIZE+1))
     
     if DIAMOND_SHAPE:
-        map = DiamondHexMap(SIZE, False, 1, [6])
+        map = DiamondHexMap(SIZE, True, 1, [5, 6, 7])
     else:
-        map = TriangleHexMap(SIZE, False, 1, [4])
+        map = TriangleHexMap(SIZE, False, 1, [1, 4, 8])
     
     world = PegSolitaire(map)
     environment = PegSolEnvironment(world)
@@ -145,7 +152,7 @@ if __name__ == "__main__":
         game = True
         current_episode = [] 
 
-        # see SuttonBarto - page 232 - fig 9 algorithm (e = 0), for NN
+        # See Sutton & Barto - page 232 - fig 9 algorithm (e = 0), for NN
         learner.critic.reset_e_trace()
 
         """Initialize s and a"""

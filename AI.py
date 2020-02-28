@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 
 class RLearner:
     """
-        The agent that 
+        The agent that owns the actor and critic
     """
     def __init__(self, 
                 actor, 
@@ -159,7 +159,7 @@ class NeuralNetCritic(Critic):
         # Compute gradients of loss-function (NOT USED)
         #self.loss(self.TD_error).backward(retain_graph=True) # Retain graph so buffers can be freed
     
-        # Gradient update as explained in Sutton & Barto (p. 232)
+        # Gradient computation as presented in Sutton & Barto (p. 232)
         self.get_value(state).backward()
         
         # Update weights for each layer 
